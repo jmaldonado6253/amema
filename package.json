@@ -2,10 +2,12 @@
   "name": "amemabot",
   "version": "1.0.0",
   "description": "",
+  "repository": "https://github.com/zaaakk/amemadev.git",
   "main": "bot.js",
   "dependencies": {
-    "twit": "^2.1.0",
-    "async": "^1.3.0"
+    "async": "^1.3.0",
+    "shortid": "^2.2.2",
+    "twit": "^2.1.0"
   },
   "devDependencies": {},
   "scripts": {

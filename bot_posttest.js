@@ -6,21 +6,35 @@ var fs = require('fs');
 var Twit = require('twit');
 var async = require('async');
 var config = require('./config');
+var shortid = require ('shortid');
 
 var T = new Twit(config);
 
+var dbpath = './amemadb.json';
 
-//
-//  get image
-//
-//getImage = function
+var db = JSON.parse(fs.readFileSync(dbpath, 'utf8'));
+
+//TODO get and modify images
+
+function createnewimg(curimgid) {
+  var curimgid = shortid.generate();
+  db[curimgid] = {};
+  db[curimgid].author = 'testbot';
+  db[curimgid].origin = Date.now();
+  db[curimgid].history = [{date: Date.now(), author: 'testbot'}];
+};
 
 
 
-//
-// modify image
-//
-//modifyImage = function (in, out) {
+fs.writeFile(dbpath, JSON.stringify(db, null, 4), function(err) {
+    if(err) {
+      console.log(err);
+    } else {
+      console.log("JSON saved to " + dbpath);
+      }
+});
+
+
 
 //  var exec = require('child_process').exec;
 //  var cmd = "/home/javier/badpng/badpng \
@@ -52,8 +66,6 @@ postTweet = function (status, callback) {
       console.log("something should have happened by now")
     })
 }
-postTweet();
-
 
 
 //function randIndex (arr) {
