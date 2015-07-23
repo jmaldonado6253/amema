@@ -5,14 +5,31 @@
 var fs = require('fs');
 var Twit = require('twit');
 var async = require('async');
-var config = require('./config');
-var shortid = require ('shortid');
+//var config = require('./config');
+var shortid = require('shortid');
+var cv = require('opencv');
 
-var T = new Twit(config);
+//var T = new Twit(config);
 
 var dbpath = './amemadb.json';
 
 var db = JSON.parse(fs.readFileSync(dbpath, 'utf8'));
+
+//compareImages takes two filenames as strings and returns an integer from 1 to 100 based on the similarity of the histograms
+function compareImages(base, test) {
+	cv.readImage(base, function(err, imbase) {
+		if (err) throw err;
+		cv.readImage(base, function(err, imtest) {
+			if (err) throw err;
+			cv.ImageSimilarity(imbase, imtest, function(err, dissim){
+				if (err) throw err;
+				console.log('SCORE::: ', dissim);
+			});
+		});
+	});
+};
+
+compareImages('/home/javier/images/1.png', '/home/javier/images/2.png');
 
 //TODO get and modify images
 
