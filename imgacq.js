@@ -3,6 +3,8 @@ var fs = require('fs');
 var shortid = require('shortid');
 var chan = require('4chanjs');
 var ezimg = require('easyimage');
+var FeedParser = require('feedparser');
+var request = require('request');
 
 function randind(arr) {
         var index = Math.floor(arr.length * Math.random());
@@ -46,6 +48,37 @@ function saveimg(url, ext) {
     });
 }
 
+//process an oublio stream
+function oublio() {
+    var req = request('http://feeds.feedburner.com/oublio_twitter?format=xml'),
+        feedparser = new FeedParser([]);
+
+    req.on('error', function (error) {
+        console.log(error);
+    });
+
+    req.on('response', function (res) {
+        var stream = this;
+        if (res.statusCode != 200) return this.emit('error', new Error('Bad status code'));
+        stream.pipe(feedparser);
+    });
+
+    feedparser.on('error', function(error) {
+        console.log(error);
+    });
+
+    feedparser.on('readable', function() {
+        // This is where the action is!
+        var stream = this,
+            meta = this.meta, // **NOTE** the "meta" is always available in the context of the feedparser instance
+            item;
+        while (item = stream.read()) {
+            var separator = '"';
+            console.log(item.description.split(separator)[1]);
+        }
+    });
+}
+
 // download the first five images from s4s
 function dlchan() {
         var s4s = chan.board('s4s');
@@ -63,4 +96,4 @@ function dlchan() {
         });
 }
 
-dlchan();
+oublio();
