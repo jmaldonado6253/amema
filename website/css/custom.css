@@ -1,0 +1,47 @@
+html {
+   height: 100%;
+}
+
+body {
+ font-size:60px;
+  min-height: 100%;
+  background: #80d4f7; /* Old browsers */
+  background: -moz-linear-gradient(top, #80d4f7 2%, #ffe5f0 46%, #f2488f 100%); /* FF3.6+ */
+  background: -webkit-gradient(linear, left top, left bottom, color-stop(2%,#80d4f7), color-stop(46%,#ffe5f0), color-stop(100%,#f2488f)); /* Chrome,Safari4+ */
+  background: -webkit-linear-gradient(top, #80d4f7 2%,#ffe5f0 46%,#f2488f 100%); /* Chrome10+,Safari5.1+ */
+  background: -o-linear-gradient(top, #80d4f7 2%,#ffe5f0 46%,#f2488f 100%); /* Opera 11.10+ */
+  background: -ms-linear-gradient(top, #80d4f7 2%,#ffe5f0 46%,#f2488f 100%); /* IE10+ */
+  background: linear-gradient(to bottom, #80d4f7 2%,#ffe5f0 46%,#f2488f 100%); /* W3C */
+  filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#80d4f7', endColorstr='#f2488f',GradientType=0 ); /* IE6-9 */
+  copy
+}
+
+.navbar-custom {
+
+  background-color: #fff;
+  border-color: #fff;
+}
+
+
+
+a{
+     color:#F2488F;
+     font-size:60px;
+}
+
+a:hover{
+  color: #80D4F7
+}
+
+
+ul.nav li a, ul.nav li a:visited {
+    color: #F2488F !important;
+}
+
+ul.nav li a:hover, ul.nav li a:active {
+    color: #80D4F7 !important;
+}
+
+ul.nav li.active a {
+    color: #F2488F !important;
+}
