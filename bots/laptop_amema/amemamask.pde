@@ -20,11 +20,11 @@ void setup() {
 }
 
 void draw() {  
-   //g_time += 0.1;
+  // g_time += 0.1;
    noiseDetail(2,1);
-  float threshold = 200;
+  float threshold = 100;
   float threshold2 = 250;
-     g_time += 0.1;
+   //  g_time += 0.1;
   // We are going to look at both image's pixels
   source.loadPixels();
   destination.loadPixels();
