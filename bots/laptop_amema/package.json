@@ -12,7 +12,8 @@
     "request": "^2.61.0",
     "shortid": "^2.2.2",
     "twit": "^2.1.0",
-    "gm": "^1.21.1"
+    "gm": "^1.21.1",
+	"jimp": "0.2.21"
   },
   "devDependencies": {},
   "scripts": {

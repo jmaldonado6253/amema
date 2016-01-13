@@ -3,7 +3,7 @@
 //  Service to periodically get, modify and post images
 //
 var fs = require('fs');
-var gm = require('gm');
+var Jimp = require("jimp");
 var Twit = require('twit');
 var async = require('async');
 var shortid = require('shortid');
@@ -36,11 +36,20 @@ fs.writeFile(dbpath, JSON.stringify(db, null, 4), function(err) {
 });
 
 */
+Jimp.read("poutput.png", function (err, poutput) {
+Jimp.read("newimage.png", function (err, newimage) {
+    if (err) throw err;
+	newimage.mask(poutput, 0, 0 )
+         .write("mask.png"); // save 
+	});
+});
 
-gm('test.jpg')
-.size(function (err, size) {
-  if (!err)
-    console.log(size.width > size.height ? 'wider' : 'taller than you');
+Jimp.read("input.jpg", function (err, input) {
+Jimp.read("mask.png", function (err, mask) {
+    if (err) throw err;
+	input.composite(mask, 0, 0)
+         .write("finaloutput.png"); // save 
+	});
 });
 
 

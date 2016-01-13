@@ -10,17 +10,19 @@ int linearize(int x, int y)
 }
 
 float g_time;
-
+ float r = random(0,1);
 void setup() {
   size(400, 400);
   source = loadImage("input.jpg");  
   // The destination image is created as a blank image the same size as the source.
   destination = createImage(source.width, source.height, RGB);
     g_time = 0.0;
+   
 }
 
 void draw() {  
-  // g_time += 0.1;
+
+    g_time += 0.1;
    noiseDetail(2,1);
   float threshold = 100;
   float threshold2 = 250;
@@ -36,9 +38,9 @@ void draw() {
      
       int loc = x + y*source.width;
       // Test the brightness against the threshold
-      if (brightness(source.pixels[loc]) > threshold2*noiseval) {
+      if (brightness(source.pixels[loc]) > threshold2*r) {
         destination.pixels[loc]  = color(0);  // White
-      }   else if ((brightness(source.pixels[loc]) < (threshold2*noiseval)) && ((brightness(source.pixels[loc])) > threshold*noiseval)) {
+      }   else if ((brightness(source.pixels[loc]) < (threshold2*r)) && ((brightness(source.pixels[loc])) > threshold*r)) {
         destination.pixels[loc]  = source.pixels[loc];    // middle
       }
       else {
@@ -52,8 +54,16 @@ void draw() {
   // Display the destination
   image(destination,0,0);
   
+
   
+  if (r > .5) {
+  filter(INVERT);
+  }
   
+  if (r > .9) {
+  filter(BLUR, 6);
+  }
   
-   save("output.jpg");
+  filter(GRAY);
+   save("poutput.png");
 }
