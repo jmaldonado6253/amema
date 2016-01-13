@@ -36,22 +36,93 @@ fs.writeFile(dbpath, JSON.stringify(db, null, 4), function(err) {
 });
 
 */
+
+//create a randomInt function
+
+function randomInt (low, high) {
+    return Math.floor(Math.random() * (high - low) + low);
+};
+
+//create a random floating point function
+
+function random (low, high) {
+    return Math.random() * (high - low) + low;
+	
+};
+
+//generate a random floating point variable
+
+var dice1 = random(0,1);
+
+/*this function is an if/else statement that allows a regular mask to be generated
+50% of the time, a blurred mask 20% of the time, and an inverted mask
+the remaining 30% of the time. it takes the argument "dice" but i'm pretty sure
+that's wrong somehow*/
+
+function diceroll(dice) {
+	if (dice < .5 ){
+Jimp.read("input.png", function (err, input) {
+	input.greyscale()
+		.brightness(random(-.5,1))
+		.contrast(random(.5,1))
+		.posterize(randomInt(2,20))
+		.write("poutput.png"); // save
+		
+})
+	
+	
+} else if (dice > .5 && dice < .7) {
+	
+Jimp.read("input.png", function (err, input) {
+	input.greyscale()
+		.contrast(random(0,1))
+		.posterize(randomInt(2,20))
+		.blur(randomInt(1,15))
+		.write("poutput.png"); // save
+		
+})
+	
+} else {
+	Jimp.read("input.png", function (err, input) {
+	input.greyscale()
+		.contrast(random(0,1))
+		.posterize(randomInt(2,20))
+		.invert()
+		.write("poutput.png"); // save
+	})
+		}
+};
+
+
+//beginning of async series
+
+async.series([
+
+//call diceroll function
+function diceroll(dice1){},
+
+//create mask
+	
 Jimp.read("poutput.png", function (err, poutput) {
 Jimp.read("newimage.png", function (err, newimage) {
     if (err) throw err;
 	newimage.mask(poutput, 0, 0 )
          .write("mask.png"); // save 
 	});
-});
+}),
 
-Jimp.read("input.jpg", function (err, input) {
+//apply mask to image
+	
+Jimp.read("input.png", function (err, input) {
 Jimp.read("mask.png", function (err, mask) {
     if (err) throw err;
 	input.composite(mask, 0, 0)
          .write("finaloutput.png"); // save 
 	});
-});
+}),
 
+	
+]);
 
 //  var exec = require('child_process').exec;
 //  var cmd = "/home/javier/badpng/badpng \
