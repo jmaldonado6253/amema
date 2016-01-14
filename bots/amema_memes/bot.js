@@ -7,6 +7,7 @@ var fs = require('fs');
 var shortid = require('shortid');
 var async = require('async');
 var child = require('child_process');
+var schedule = require('node-schedule');
 
 var Twit = require('twit');
 var config = require('./config');
@@ -141,7 +142,7 @@ function select() {
       lowest[4][1] = comparisons[i];
       break;
     }
-  };
+  }
   return [JSON.parse(images[lowest[0][0]]),
           JSON.parse(images[lowest[1][0]]),
           JSON.parse(images[lowest[2][0]]),

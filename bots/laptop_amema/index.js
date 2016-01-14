@@ -66,9 +66,8 @@ function diceroll(callback) {
       .contrast(random(0.5,1))
       .posterize(randomInt(2,20))
       .write("poutput.png"); // save
+      callback(null, "poutput.png", "newimage.png");
     });
-
-
   } else if (dice > 0.5 && dice < 0.7) {
 
     Jimp.read(inputimage, function (err, input) {
@@ -77,7 +76,7 @@ function diceroll(callback) {
       .posterize(randomInt(2,20))
       .blur(randomInt(1,15))
       .write("poutput.png"); // save
-
+      callback(null, "poutput.png", "newimage.png");
     });
 
   } else {
@@ -87,37 +86,37 @@ function diceroll(callback) {
       .posterize(randomInt(2,20))
       .invert()
       .write("poutput.png"); // save
+      callback(null, "poutput.png", "newimage.png");
     });
   }
-  callback(null, "poutput.png", "newimage.png");
 }
 
-function createmask(callback, maskguide, maskimage) {
-
+function createmask(maskguide, maskimage, callback) {
   Jimp.read(maskguide, function (err, poutput) {
+    if(err) console.log(err);
     Jimp.read(maskimage, function (err, newimage) {
-      if (err) throw err;
+      if (err) console.log(err);
       newimage.mask(poutput, 0, 0 )
       .write("mask.png"); // save
+      callback(null, "input.png", "mask.png");
     });
   });
-  callback(null, "input.png", "mask.png");
 }
 
-function applymask(callback, inputimage, maskfinal) {
+function applymask(inputimage, maskfinal, callback) {
   Jimp.read(inputimage, function (err, input) {
     Jimp.read(maskfinal, function (err, mask) {
       if (err) throw err;
       input.composite(mask, 0, 0)
       .write("finaloutput.png"); // save
+      callback(null);
     });
   });
-  callback(null);
 }
 
 //beginning of async series
 
-async.series([
+async.waterfall([
 
   //call diceroll function
   diceroll,
