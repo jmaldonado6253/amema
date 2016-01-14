@@ -62,7 +62,7 @@ function diceroll(callback) {
   if (dice < 0.5 ){
     Jimp.read(inputimage, function (err, input) {
       input.greyscale()
-      .brightness(random(-0.5,1))
+      .brightness(random(-.25,.5))
       .contrast(random(0.5,1))
       .posterize(randomInt(2,20))
       .write("poutput.png"); // save
@@ -72,7 +72,7 @@ function diceroll(callback) {
 
     Jimp.read(inputimage, function (err, input) {
       input.greyscale()
-      .contrast(random(0,1))
+      .contrast(random(0,.5))
       .posterize(randomInt(2,20))
       .blur(randomInt(1,15))
       .write("poutput.png"); // save
