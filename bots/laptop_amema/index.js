@@ -51,13 +51,14 @@ function random (low, high) {
 
 //generate a random floating point variable
 
-var dice1 = random(0,1);
 
 /*this function is an if/else statement that allows a regular mask to be generated
 50% of the time, a blurred mask 20% of the time, and an inverted mask
 the remaining 30% of the time.*/
 
-function diceroll(dice, inputimage) {
+function diceroll(callback) {
+  var dice = random(0,1);
+  var inputimage = 'input.png';
   if (dice < 0.5 ){
     Jimp.read(inputimage, function (err, input) {
       input.greyscale()
@@ -88,9 +89,10 @@ function diceroll(dice, inputimage) {
       .write("poutput.png"); // save
     });
   }
+  callback(null, "poutput.png", "newimage.png");
 }
 
-function createmask(maskguide, maskimage) {
+function createmask(callback, maskguide, maskimage) {
 
   Jimp.read(maskguide, function (err, poutput) {
     Jimp.read(maskimage, function (err, newimage) {
@@ -99,9 +101,10 @@ function createmask(maskguide, maskimage) {
       .write("mask.png"); // save
     });
   });
+  callback(null, "input.png", "mask.png");
 }
 
-function applymask(inputimage, maskfinal) {
+function applymask(callback, inputimage, maskfinal) {
   Jimp.read(inputimage, function (err, input) {
     Jimp.read(maskfinal, function (err, mask) {
       if (err) throw err;
@@ -109,6 +112,7 @@ function applymask(inputimage, maskfinal) {
       .write("finaloutput.png"); // save
     });
   });
+  callback(null);
 }
 
 //beginning of async series
@@ -116,16 +120,13 @@ function applymask(inputimage, maskfinal) {
 async.series([
 
   //call diceroll function
-  diceroll(dice1, "input.png"),
+  diceroll,
 
   //create mask
-  createmask("poutput.png", "newimage.png"),
+  createmask,
 
   //apply mask to image
-
-  applymask("input.png", "mask.png")
-
-
+  applymask
 ]);
 
 //  var exec = require('child_process').exec;
