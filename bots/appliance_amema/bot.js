@@ -1,18 +1,19 @@
 //
-//  iphone_amema
+//  appliance_amema
 //  Service to periodically get, modify and post images
 //
 var fs = require('fs');
 var shortid = require('shortid');
 var async = require('async');
 var child = require('child_process');
+var pyshell = require('python-shell');
+var gm = require('gm');
 
 var Twit = require('twit');
 var config = require('./config');
 var T = new Twit(config);
 
 var redis = require('redis');
-var pub = redis.createClient('32768', '52.91.195.111');
 var sub = redis.createClient('32768', '52.91.195.111');
 var client = redis.createClient('32768', '52.91.195.111');
 var control =  null;
@@ -27,10 +28,10 @@ client.on("error", function (err) {
 
 sub.on('connect', function() {
     sub.subscribe('control');
-    sub.subscribe('M->I',
-                  'A->I',
-                  'L->I',
-                  'N->I');
+    sub.subscribe('M->A',
+                  'I->A',
+                  'L->A',
+                  'N->A');
 });
 
 sub.on('message', function(channel, message) {
@@ -43,7 +44,7 @@ sub.on('message', function(channel, message) {
 });
 
 function sendNextImage(image_id) {
-  pub.publish(control.pop(), image_id);
+  client.publish(control.pop(), image_id);
 }
 
 function modify(image_id) {
@@ -57,13 +58,31 @@ function modify(image_id) {
         //modify images
         var imageBuffer = new Buffer(img.data, 'base64');
         fs.writeFileSync('in.png', imageBuffer, function(err) {console.log(err);});
-        child.execFileSync('/usr/src/app/badpng/badpng', ['in.png', 'out.png']);
+        var options = {
+          mode: 'text',
+	  pythonPath: '/usr/bin/python',
+	  pythonOptions: ['-u'],
+	  scriptPath: '/opt/deepdreamer/',
+	  args: ['--zoom=false', '--dreams=1']
+	};
+        pyshell.run('deepdreamer.py', options, function(err, results) {
+          if(err) throw err;
+          console.log('results %j', results);
+          callback(null, img);
+        });
+      },
+      function(img, callback) {
         child.execFileSync('rm', ['in.png']);
+        gm('in.png_0.jpg').write('out.png', function (err) {
+          if (!err) callback(null, img);
+        });
+      },
+      function(img, callback) {
         newimg = {};
         newimg.id = shortid.generate();
-        newimg.author = 'iphone_amema';
+        newimg.author = 'appliance_amema';
         newimg.origin = Date.now();
-        newimg.history = [{date: Date.now(), author: 'iphone_amema'}].concat(img.history);
+        newimg.history = [{date: Date.now(), author: 'appliance_amema'}].concat(img.history);
         newimg.data = fs.readFileSync('out.png').toString('base64');
         callback(null, newimg);
       },

@@ -72,10 +72,11 @@ function oublio() {
         var stream = this,
             meta = this.meta, // **NOTE** the "meta" is always available in the context of the feedparser instance
             item;
-        while (item = stream.read()) {
+        do {
+            item = stream.read();
             var separator = '"';
             console.log(item.description.split(separator)[1]);
-        }
+        } while (item);
     });
 }
 

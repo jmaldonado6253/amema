@@ -1,7 +1,7 @@
 {
-  "name": "iphone_amema",
+  "name": "amema_memes",
   "version": "1.0.0",
-  "description": "Amema agent, badpng",
+  "description": "Amema control, selection",
   "homepage": "http://github.com/jmaldonado6253/amema",
   "repository": "jmaldonado6253/amema",
   "bugs": "javier.maldonado@yale.edu",
@@ -15,8 +15,7 @@
   "devDependencies": {},
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node start.js",
-    "install": "bash install.sh"
+    "start": "node start.js"
   },
   "author": "Javier Maldonado <javier.maldonado@yale.edu>",
   "contributors": [

@@ -1,13 +1,15 @@
 {
-  "name": "iphone_amema",
+  "name": "appliance_amema",
   "version": "1.0.0",
-  "description": "Amema agent, badpng",
+  "description": "Amema agent, deepdream",
   "homepage": "http://github.com/jmaldonado6253/amema",
   "repository": "jmaldonado6253/amema",
   "bugs": "javier.maldonado@yale.edu",
   "main": "bot.js",
   "dependencies": {
     "async": "^1.5.1",
+    "gm": "^1.21.1",
+    "python-shell": "^0.3.0",
     "redis": "^2.4.2",
     "shortid": "^2.2.2",
     "twit": "^2.1.0"
@@ -15,8 +17,7 @@
   "devDependencies": {},
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node start.js",
-    "install": "bash install.sh"
+    "start": "node start.js"
   },
   "author": "Javier Maldonado <javier.maldonado@yale.edu>",
   "contributors": [
