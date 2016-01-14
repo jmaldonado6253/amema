@@ -7,50 +7,125 @@ var Jimp = require("jimp");
 var Twit = require('twit');
 var async = require('async');
 var shortid = require('shortid');
-//var config = require('./config');
-//var T = new Twit(config);
+var config = require('./config');
+var T = new Twit(config);
 
-//var dbpath = './amemadb.json';
+var redis = require('redis');
+var sub = redis.createClient('6379', 'redis');
+var client = redis.createClient('6379', 'redis');
+var control =  null;
 
-//var db = JSON.parse(fs.readFileSync(dbpath, 'utf8'));
-
-//TODO get and modify images
-
-/*
-var curimgid = shortid.generate();
-function createnewimg(curimgid) {
-db[curimgid] = {};
-db[curimgid].author = 'testbot';
-db[curimgid].origin = Date.now();
-db[curimgid].history = [{date: Date.now(), author: 'testbot'}];
-}
-*/
-
-/*
-fs.writeFile(dbpath, JSON.stringify(db, null, 4), function(err) {
-if(err) {
-console.log(err);
-} else {
-console.log("JSON saved to " + dbpath);
-}
+client.on('connect', function() {
+      console.log('connected');
 });
 
-*/
+client.on("error", function (err) {
+      console.log("Error " + err);
+});
 
-//create a randomInt function
+sub.on('connect', function() {
+    sub.subscribe('M->L',
+                  'A->L',
+                  'I->L',
+                  'N->L');
+});
+
+sub.on('message', function(channel, message) {
+    msg = JSON.parse(message);
+    control = msg[0];
+    modify(msg[1]);
+});
+
+function sendNextImage(image_id) {
+  client.publish(control[0], JSON.stringify([image_id, control.slice(1)]));
+}
+
+function modify(image_id) {
+  async.waterfall([
+      function(callback) {
+        client.hget('user:images', image_id, function(err, reply) {
+          callback(null, JSON.parse(reply));
+        });
+      },
+      function(img, callback) {
+        //modify images
+        var imageBuffer = new Buffer(img.data, 'base64');
+        fs.writeFileSync('input.png', imageBuffer, function(err) {console.log(err);});
+        client.lindex('images', 5, function(err, reply) {
+          var newimagepng = JSON.parse(reply);
+          var newimageBuffer = new Buffer(newimagepng.data, 'base64');
+          fs.writeFileSync('newimage.png', newimageBuffer, function(err) {console.log(err);});
+          callback(null, img);
+        }
+      },
+      function(img, callback) {
+        async.waterfall([
+
+          //call diceroll function
+          diceroll,
+
+          //create mask
+          createmask,
+
+          //apply mask to image
+          applymask
+        ], function(err) {
+             callback(null, img);
+        });
+      },
+      function(img, callback) {
+        child.execFileSync('rm', ['input.png']);
+        child.execFileSync('rm', ['mask.png']);
+        child.execFileSync('rm', ['newimage.png']);
+        child.execFileSync('rm', ['poutput.png']);
+        newimg = {};
+        newimg.id = shortid.generate();
+        newimg.author = 'laptop_amema';
+        newimg.origin = Date.now();
+        newimg.history = [{date: Date.now(), author: 'laptop_amema'}].concat(img.history);
+        newimg.data = fs.readFileSync('finaloutput.png').toString('base64');
+        child.execFileSync('rm', ['finaloutput.png']);
+        callback(null, newimg);
+      },
+      function(img, callback) {
+        //post to twitter
+        T.post(
+          'media/upload',
+          { media_data: img.data },
+          function (err, data, response) {
+            var mediaIdStr = data.media_id_string;
+            var params = { status: '#amema', media_ids: [mediaIdStr] };
+
+            T.post('statuses/update', params, function (err, data, response) {
+              console.log(data);
+            });
+            console.log("something should have happened by now");
+          }
+        );
+        callback(null, img);
+      },
+      function(img, callback) {
+        //save to db
+        client.hmset('user:images', img.id, JSON.stringify(img));
+        client.lpush('images', JSON.stringify(img));
+        callback(null, img.id);
+      }
+  ], function(err, result) {
+       if(err) {
+         console.log("Err: " + err);
+       } else {
+         return result;
+       }
+  });
+}
 
 function randomInt (low, high) {
   return Math.floor(Math.random() * (high - low) + low);
 }
 
-//create a random floating point function
-
 function random (low, high) {
   return Math.random() * (high - low) + low;
 }
-
-//generate a random floating point variable
-
 
 /*this function is an if/else statement that allows a regular mask to be generated
 50% of the time, a blurred mask 20% of the time, and an inverted mask
@@ -62,7 +137,7 @@ function diceroll(callback) {
   if (dice < 0.5 ){
     Jimp.read(inputimage, function (err, input) {
       input.greyscale()
-      .brightness(random(-.25,.5))
+      .brightness(random(-0.25,0.5))
       .contrast(random(0.5,1))
       .posterize(randomInt(2,20))
       .write("poutput.png"); // save
@@ -72,7 +147,7 @@ function diceroll(callback) {
 
     Jimp.read(inputimage, function (err, input) {
       input.greyscale()
-      .contrast(random(0,.5))
+      .contrast(random(0,0.5))
       .posterize(randomInt(2,20))
       .blur(randomInt(1,15))
       .write("poutput.png"); // save
@@ -113,82 +188,3 @@ function applymask(inputimage, maskfinal, callback) {
     });
   });
 }
-
-//beginning of async series
-
-async.waterfall([
-
-  //call diceroll function
-  diceroll,
-
-  //create mask
-  createmask,
-
-  //apply mask to image
-  applymask
-]);
-
-//  var exec = require('child_process').exec;
-//  var cmd = "/home/javier/badpng/badpng \
-//  /home/javier/amema/images/used/#{img} \==
-//  /home/javier/amema/images/used/#{outputname}.png";
-
-// exec(cmd, function(error, stdout, stderr) {
-// command output is in stdout
-// });
-// }
-
-//
-//  post a tweet
-//
-
-/*postTweet = function (status, callback) {
-var b64content = fs.readFileSync('/Users/Zak/Documents/amema\ node/node_modules/twit/test.jpeg', { encoding: 'base64' });
-console.log("file read in");
-T.post(
-'media/upload',
-{ media_data: b64content },
-function (err, data, response) {
-var mediaIdStr = data.media_id_string;
-var params = { status: 'loving life #nofilter', media_ids: [mediaIdStr] };
-
-T.post('statuses/update', params, function (err, data, response) {
-console.log(data);
-});
-console.log("something should have happened by now");    });
-};
-*/
-
-//function randIndex (arr) {
-//  var index = Math.floor(arr.length*Math.random());
-//  return arr[index];
-//}
-
-
-////the big daddy function, which contains in its waterfall all the lil functions
-
-// run = function() {
-//  async.waterfall([
-//    getImage
-//    modifyImage
-//  ],
-//  function(err, botData) {
-//    if (err) {
-//      console.log('There was an error posting to Twitter: ', err);
-//    } else {
-//      console.log('Tweet successful!');
-//      console.log('Tweet: ', botData.tweetBlock);
-//    }
-//    console.log('Base tweet: ', botData.baseTweet);
-//  });
-// }
-
-
-// setInterval(function() {
-//  try {
-//    run();
-//  }
-//  catch (e) {
-//    console.log(e);
-//  }
-// }, 60000 * 60);

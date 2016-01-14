@@ -2,152 +2,81 @@
 //  amema_memes
 //  Bot control, image acquisition, selection
 //
-var http = require('http');
 var fs = require('fs');
 var shortid = require('shortid');
 var async = require('async');
-var child = require('child_process');
 var schedule = require('node-schedule');
 
 var Twit = require('twit');
 var config = require('./config');
 var T = new Twit(config);
 
-var chan = require('4chanjs');
-var ezimg = require('easyimage');
-var FeedParser = require('feedparser');
-var request = require('request');
-
 var redis = require('redis');
-var client = redis.createClient('32768', '52.91.195.111');
+var client = redis.createClient('6379', 'redis');
 
-var tlsh = require('./tlsh');
+var Tlsh = require('./tlsh');
+var filenames = fs.readdirSync('/data/');
 
-//client.on('connect', function() {
-//      console.log('connected');
-//});
-//
-//client.on("error", function (err) {
-//      console.log("Error " + err);
-//});
+client.on('connect', function() {
+      console.log('connected');
+});
 
-function modify(image_id) {
-  async.waterfall([
-      function(callback) {
-        client.get(image_id, function(err, reply) {
-          callback(null, JSON.parse(reply));
-        });
-      },
-      function(img, callback) {
-        //modify images
-        var imageBuffer = new Buffer(img.data, 'base64');
-        fs.writeFileSync('in.png', imageBuffer, function(err) {console.log(err);});
-        var options = {
-          mode: 'text',
-	  pythonPath: '/usr/bin/python',
-	  pythonOptions: ['-u'],
-	  scriptPath: '/opt/deepdreamer/',
-	  args: ['--zoom=false', '--dreams=1', '--itern=10']
-	};
-        pyshell.run('deepdreamer.py', options, function(err, results) {
-          if(err) throw err;
-          console.log('results %j', results);
-          callback(null, img);
-        });
-      },
-      function(img, callback) {
-        child.execFileSync('rm', ['in.png']);
-        gm('in.png_0.jpg').write('out.png', function (err) {
-          if (!err) callback(null, img);
-        });
-      },
-      function(img, callback) {
-        newimg = {};
-        newimg.id = shortid.generate();
-        newimg.author = 'appliance_amema';
-        newimg.origin = Date.now();
-        newimg.history = [{date: Date.now(), author: 'appliance_amema'}].concat(img.history);
-        newimg.data = fs.readFileSync('out.png').toString('base64');
-        callback(null, newimg);
-      },
-      function(img, callback) {
-        //post to twitter
-        T.post(
-          'media/upload',
-          { media_data: img.data },
-          function (err, data, response) {
-            var mediaIdStr = data.media_id_string;
-            var params = { status: '#amema', media_ids: [mediaIdStr] };
+client.on("error", function (err) {
+      console.log("Error " + err);
+});
 
-            T.post('statuses/update', params, function (err, data, response) {
-              console.log(data);
-            });
-            console.log("something should have happened by now");
-          }
-        );
-        callback(null, img);
-      },
-      function(img, callback) {
-        //save to db
-        client.hmset('user:images', img.id, JSON.stringify(img));
-        client.lpush('images', JSON.stringify(img));
-        callback(null, img.id);
-      }
-  ], function(err, result) {
-       if(err) {
-         console.log("Err: " + err);
-       } else {
-         return result;
-       }
-  });
-}
-
-function select() {
-  var comparisons = [];
-  var images = [];
+function select(cb) {
   client.lrange('images', 0, 55, function(err, imgs) {
-    var history = new Tlsh();
-    var images = imgs;
+    console.log("got images");
     client.hgetall('user:images', function(err, obj) {
-      history.update(obj.tostring, obj.length - 1);
+      var i = 0;
+      var comparisons = [];
+      var images = [];
+      var history = new Tlsh();
+      var keys = Object.keys(obj);
+      for(i = 0; i < keys.length; i++) {
+        var key = JSON.parse(obj[keys[i]]);
+        keys[i] = JSON.stringify(key.history) + " " + key.id;
+        console.log(keys[i]);
+      }
+      history.update(keys.toString(), keys.toString().length);
       history.finale();
-      for(var i = 0; i < images.length; i++) {
+      for(i = 0; i < imgs.length; i++) {
         var tmp = new Tlsh();
-        tmp.update(imgs[i]);
+        tmp.update(imgs[i], imgs[i].length);
         tmp.finale();
         comparisons[i] = history.totalDiff(tmp);
       }
+      console.log(comparisons);
+      var lowest = [[0, 2000], [0, 2000], [0, 2000], [0, 2000], [0, 2000]];
+      console.log("huh");
+      for(i = 0; i < comparisons.length; i++) {
+        console.log(lowest);
+        if(comparisons[i] < lowest[0][1]) {
+          lowest[0][0] = i;
+          lowest[0][1] = comparisons[i];
+        } else if(comparisons[i] < lowest[1][1]) {
+          lowest[1][0] = i;
+          lowest[1][1] = comparisons[i];
+        } else if(comparisons[i] < lowest[2][1]) {
+          lowest[2][0] = i;
+          lowest[2][1] = comparisons[i];
+        } else if(comparisons[i] < lowest[3][1]) {
+          lowest[3][0] = i;
+          lowest[3][1] = comparisons[i];
+        } else if(comparisons[i] < lowest[4][1]) {
+          lowest[4][0] = i;
+          lowest[4][1] = comparisons[i];
+        }
+      }
+      var result = [JSON.parse(imgs[lowest[0][0]]).id,
+                    JSON.parse(imgs[lowest[1][0]]).id,
+                    JSON.parse(imgs[lowest[2][0]]).id,
+                    JSON.parse(imgs[lowest[3][0]]).id,
+                    JSON.parse(imgs[lowest[4][0]]).id];
+      cb(null, result);
     });
   });
-  var lowest = [[0, 0], [0, 0], [0, 0], [0, 0], [0, 0]];
-  for(var i = 0; i > comparisons.length; i++) {
-    if(5 < comparisons[i] < lowest[0][1]) {
-      lowest[0][0] = i;
-      lowest[0][1] = comparisons[i];
-      break;
-    } else if(5 < comparisons[i] < lowest[1][1]) {
-      lowest[1][0] = i;
-      lowest[1][1] = comparisons[i];
-      break;
-    } else if(5 < comparisons[i] < lowest[2][1]) {
-      lowest[2][0] = i;
-      lowest[2][1] = comparisons[i];
-      break;
-    } else if(5 < comparisons[i] < lowest[3][1]) {
-      lowest[3][0] = i;
-      lowest[3][1] = comparisons[i];
-      break;
-    } else if(5 < comparisons[i] < lowest[4][1]) {
-      lowest[4][0] = i;
-      lowest[4][1] = comparisons[i];
-      break;
-    }
-  }
-  return [JSON.parse(images[lowest[0][0]]),
-          JSON.parse(images[lowest[1][0]]),
-          JSON.parse(images[lowest[2][0]]),
-          JSON.parse(images[lowest[3][0]]),
-          JSON.parse(images[lowest[4][0]])];
 }
 
 function order() {
@@ -187,94 +116,51 @@ function order() {
   return obj.arr;
 }
 
-function randind(arr) {
-        var index = Math.floor(arr.length * Math.random());
-        return arr[index];
+function processControl(cont) {
+  for(var i = 0; i < cont.length; i++) {
+    for(var p = 0; p < cont[i].length-1; p++) {
+      cont[i][p] = cont[i][p] + "->" + cont[i][p+1];
+    }
+  }
+  return cont;
 }
 
-function download(url, dest, cb) {
-    console.log("download function entered, url is "+url);
-    var file = fs.createWriteStream(dest);
-    var request = http.get(url, function(response) {
-        response.pipe(file);
-        file.on('finish', function() {
-            file.close(cb);  // close() is async, call cb after close completes.
-        });
-    }).on('error', function(err) { // Handle errors
-    fs.unlink(dest); // Delete the file async. (But we don't check the result)
-    if (cb) cb(err.message);
+function pullFromFile(cb) {
+  img = {};
+  img.id = shortid.generate();
+  img.author = 'external';
+  img.origin = Date.now();
+  img.history = [{date: Date.now(), author: 'external'}];
+  img.data = fs.readFileSync('/data/'+filenames.pop()).toString('base64');
+  client.hset('user:images', img.id, JSON.stringify(img), function(err, res) {
+    client.lpush('images', JSON.stringify(img), function(err, res) {
+      console.log("pulled image: " + img.id);
+      cb(null, img.id);
     });
+  });
 }
 
-//save image at specified url to ./images as a 500x500 png
-function saveimg(url, ext) {
-    var tempfile = "temp" + ext;
-    download(url, tempfile, function(err) {
-        console.log("recieved "+url+" now attempting to save as "+tempfile);
-        var filename = shortid.generate() + ".png";
-        console.log("file downloaded, attempting to process and save as "+filename);
-        ezimg.resize({
-                src: tempfile,
-                dst: "images/"+shortid.generate()+".png",
-                width: 400,
-                height: 400,
-                ignoreAspectRatio: true
-        }).then(function(image){
-                fs.unlinkSync(tempfile);
-                console.log("successfully modified and saved "+image.name);
-        }, function(err) {
-                console.log(err);
-        });
-
-    });
+function initiate() {
+  //generate control
+  async.series([
+      function(callback) {pullFromFile(callback);},
+      function(callback) {pullFromFile(callback);},
+      function(callback) {pullFromFile(callback);},
+      function(callback) {pullFromFile(callback);},
+      function(callback) {select(callback);}
+  ], function(err, res) {
+    var lastarr = [];
+    lastarr[0] = res[0];
+    lastarr[1] = res[1];
+    lastarr[2] = res[2];
+    lastarr[3] = res[3];
+    lastarr = lastarr.concat(res[4]);
+    cont = processControl(order());
+    for(var i = 0; i < cont.length; i++) {
+      client.publish(cont[i][0], JSON.stringify([lastarr[i], cont[i].slice(1)]));
+  });
 }
 
-//process an oublio stream
-function oublio() {
-    var req = request('http://feeds.feedburner.com/oublio_twitter?format=xml'),
-        feedparser = new FeedParser([]);
-
-    req.on('error', function (error) {
-        console.log(error);
-    });
-
-    req.on('response', function (res) {
-        var stream = this;
-        if (res.statusCode != 200) return this.emit('error', new Error('Bad status code'));
-        stream.pipe(feedparser);
-    });
-
-    feedparser.on('error', function(error) {
-        console.log(error);
-    });
-
-    feedparser.on('readable', function() {
-        // This is where the action is!
-        var stream = this,
-            meta = this.meta, // **NOTE** the "meta" is always available in the context of the feedparser instance
-            item;
-        do {
-            item = stream.read();
-            var separator = '"';
-            console.log(item.description.split(separator)[1]);
-        } while (item);
-    });
-}
-
-// download the first five images from s4s
-function dlchan() {
-        var s4s = chan.board('s4s');
-        s4s.threads(function(err, threads){
-                threadno = threads[1].threads[0].no;
-                console.log(threadno);
-                s4s.thread(threadno, function(err, posts) {
-                        rpost = randind(posts);
-                        while(!rpost.tim && !rpost.ext){
-                            rpost = randind(posts);
-                        }
-                        saveimg("http://i.4cdn.org/s4s/"+rpost.tim+rpost.ext, rpost.ext);
-                });
-        });
-}
-
-oublio();
+var j = schedule.scheduleJob('0 * * * *', function(){
+initiate();
+});

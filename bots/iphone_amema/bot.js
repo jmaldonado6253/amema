@@ -12,9 +12,8 @@ var config = require('./config');
 var T = new Twit(config);
 
 var redis = require('redis');
-var pub = redis.createClient('32768', '52.91.195.111');
-var sub = redis.createClient('32768', '52.91.195.111');
-var client = redis.createClient('32768', '52.91.195.111');
+var sub = redis.createClient('6379', 'redis');
+var client = redis.createClient('6379', 'redis');
 var control =  null;
 
 client.on('connect', function() {
@@ -26,7 +25,6 @@ client.on("error", function (err) {
 });
 
 sub.on('connect', function() {
-    sub.subscribe('control');
     sub.subscribe('M->I',
                   'A->I',
                   'L->I',
@@ -34,16 +32,13 @@ sub.on('connect', function() {
 });
 
 sub.on('message', function(channel, message) {
-  if(message === 'control') {
-    control = message;
-  } else {
-    newid = modify(message);
-    sendNextImage(newid);
-  }
+    msg = JSON.parse(message);
+    control = msg[0];
+    modify(msg[1]);
 });
 
 function sendNextImage(image_id) {
-  pub.publish(control.pop(), image_id);
+  client.publish(control[0], JSON.stringify([image_id, control.slice(1)]));
 }
 
 function modify(image_id) {
@@ -65,6 +60,7 @@ function modify(image_id) {
         newimg.origin = Date.now();
         newimg.history = [{date: Date.now(), author: 'iphone_amema'}].concat(img.history);
         newimg.data = fs.readFileSync('out.png').toString('base64');
+        child.execFileSync('rm', ['out.png']);
         callback(null, newimg);
       },
       function(img, callback) {
@@ -94,7 +90,7 @@ function modify(image_id) {
        if(err) {
          console.log("Err: " + err);
        } else {
-         return result;
+         sendNextImage(result);
        }
   });
 }

@@ -27,7 +27,6 @@ client.on("error", function (err) {
 });
 
 sub.on('connect', function() {
-    sub.subscribe('control');
     sub.subscribe('M->A',
                   'I->A',
                   'L->A',
@@ -35,16 +34,13 @@ sub.on('connect', function() {
 });
 
 sub.on('message', function(channel, message) {
-  if(message === 'control') {
-    control = message;
-  } else {
-    newid = modify(message);
-    sendNextImage(newid);
-  }
+    msg = JSON.parse(message);
+    control = msg[0];
+    modify(msg[1]);
 });
 
 function sendNextImage(image_id) {
-  client.publish(control.pop(), image_id);
+  client.publish(control[0], JSON.stringify([image_id, control.slice(1)]));
 }
 
 function modify(image_id) {
@@ -113,7 +109,7 @@ function modify(image_id) {
        if(err) {
          console.log("Err: " + err);
        } else {
-         return result;
+         sendNextImage(result);
        }
   });
 }

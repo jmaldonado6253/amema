@@ -12,6 +12,7 @@ amema_memes:
   command: node bot.js
   volumes:
     - ./amema_memes/:/usr/src/app
+    - ./corpus/:/data
   links:
     - redis
 application_amema:

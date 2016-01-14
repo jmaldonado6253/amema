@@ -1,6 +1,7 @@
 config.js
 node_modules
 images/
+corpus/
 badpng
 logs
 *.log

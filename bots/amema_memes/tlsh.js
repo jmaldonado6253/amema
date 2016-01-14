@@ -15,20 +15,20 @@
  */
 
 /*
- * Port of C++ implementation tlsh to javascript.  
+ * Port of C++ implementation tlsh to javascript.
  *
  * Construct Tlsh object with methods:
- *   update 
- *   finale 
+ *   update
+ *   finale
  *   fromTlshStr
- *   reset 
- *   hash 
- *   totalDiff 
+ *   reset
+ *   hash
+ *   totalDiff
  *
  * See tlsh.html for example use.
  */
 
-var debug = false; 
+var debug = false;
 ///////////////////////////////////////////////////////////////////////////////////
 // From tlsh_util.cpp
 var v_table = new Uint8Array([
@@ -49,10 +49,10 @@ var v_table = new Uint8Array([
     140, 36, 210, 172, 41, 54, 159, 8, 185, 232, 113, 196, 231, 47, 146, 120,
     51, 65, 28, 144, 254, 221, 93, 189, 194, 139, 112, 43, 71, 109, 184, 209]);
 
-function b_mapping(salt, i, j, k) 
+function b_mapping(salt, i, j, k)
 {
     var h = 0;
-    
+
     h = v_table[h ^ salt];
     h = v_table[h ^ i];
     h = v_table[h ^ j];
@@ -73,7 +73,7 @@ function l_capturing(len) {
     } else {
         i = Math.floor( Math.log(len) / LOG_1_1 - 62.5472 );
     }
-    
+
     return (i & 0xFF);
 }
 
@@ -88,14 +88,13 @@ function swap_byte( i )
 function to_hex( data, len )
 {
     // Use TLSH.java implementation for to_hex
-    var s = new String;
+    var s = "";
     for (var i=0; i<len; i++) {
         if (data[i] < 16) {
             s = s.concat("0");
-        }   
-        debug && console.log("to_hex: "+data[i]);
+        }
         s = s.concat(data[i].toString(16).toUpperCase());
-    }   
+    }
 
     return s;
 }
@@ -124,19 +123,19 @@ function mod_diff(x, y, R)
     return (dl > dr ? dr : dl);
 }
 
-// Use  generateTable() from TLSH.java implementation 
+// Use  generateTable() from TLSH.java implementation
 function generateTable()
 {
     var arraySize = 256;
     var result = new Array(arraySize);
     for (var i=0; i<result.length; i++)
     {
-        result[i] = new Uint8Array(arraySize);   
+        result[i] = new Uint8Array(arraySize);
     }
 
-    for (var i = 0; i < arraySize; i++) {
+    for (var p = 0; p < arraySize; p++) {
         for (var j = 0; j < arraySize; j++) {
-            var x = i, y = j, d, diff = 0;
+            var x = p, y = j, d, diff = 0;
             d = Math.abs(x % 4 - y % 4); diff += (d == 3 ? 6 : d);
             x = Math.floor(x / 4);
             y = Math.floor(y / 4);
@@ -144,17 +143,17 @@ function generateTable()
             d = Math.abs(x % 4 - y % 4); diff += (d == 3 ? 6 : d);
             x = Math.floor(x / 4);
             y = Math.floor(y / 4);
-            
+
             d = Math.abs(x % 4 - y % 4); diff += (d == 3 ? 6 : d);
             x = Math.floor(x / 4);
             y = Math.floor(y / 4);
-            
+
             d = Math.abs(x % 4 - y % 4); diff += (d == 3 ? 6 : d);
-            result[i][j] = diff;
+            result[p][j] = diff;
         }
-    }  
+    }
     return result;
-}    
+}
 
 var bit_pairs_diff_table = generateTable();
 
@@ -162,10 +161,8 @@ function h_distance( len, x, y)
 {
     var diff = 0;
     for( var i=0; i<len; i++ ){
-        debug && console.log("bit_pairs_diff_table["+x[i]+"]["+y[i]+"]="+bit_pairs_diff_table[x[i]][y[i]]);
         diff += bit_pairs_diff_table[ x[i] ][ y[i] ];
     }
-    debug && console.log("h_distance returning "+diff);
     return diff;
 }
 
@@ -182,17 +179,17 @@ var TLSH_STRING_LEN = 70;  // 2 + 1 + 32 bytes = 70 hexidecimal chars
 var RANGE_LVALUE = 256;
 var RANGE_QRATIO = 16;
 
-function SWAP_UINT(buf, x, y) 
-{ 
+function SWAP_UINT(buf, x, y)
+{
     var int_tmp = buf.bucket_copy[x];
     buf.bucket_copy[x] = buf.bucket_copy[y];
-    buf.bucket_copy[y] = int_tmp; 
+    buf.bucket_copy[y] = int_tmp;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////
 // TLSH member and non-member functions - from tlsh_impl.cpp
 
-function partition(buf, left, right) 
+function partition(buf, left, right)
 {
     if( left == right ) {
         return left;
@@ -203,15 +200,15 @@ function partition(buf, left, right)
         }
         return left;
     }
-        
+
     var ret = left;
     var pivot = (left + right)>>1;
-    
+
     var val = buf.bucket_copy[pivot];
-    
+
     buf.bucket_copy[pivot] = buf.bucket_copy[right];
     buf.bucket_copy[right] = val;
-    
+
     for( var i = left; i < right; i++ ) {
         if( buf.bucket_copy[i] < val ) {
             SWAP_UINT( buf, ret, i );
@@ -220,13 +217,13 @@ function partition(buf, left, right)
     }
     buf.bucket_copy[right] = buf.bucket_copy[ret];
     buf.bucket_copy[ret] = val;
-    
+
     return ret;
 }
 
-function find_quartile(tlsh, quartiles) 
+function find_quartile(tlsh, quartiles)
 {
-    var buf = new Object();
+    var buf = {};
     buf.bucket_copy = new Uint32Array(EFF_BUCKETS);
     var short_cut_left = new Uint32Array(EFF_BUCKETS);
     var short_cut_right = new Uint32Array(EFF_BUCKETS);
@@ -236,13 +233,14 @@ function find_quartile(tlsh, quartiles)
     var p2 = EFF_BUCKETS/2-1;
     var p3 = EFF_BUCKETS-EFF_BUCKETS/4-1;
     var end = EFF_BUCKETS-1;
+    var ret;
 
     for(var i=0; i<=end; i++) {
         buf.bucket_copy[i] = tlsh.a_bucket[i];
     }
 
     for( var l=0, r=end; ; ) {
-        var ret = partition( buf, l, r );
+        ret = partition( buf, l, r );
         if( ret > p2 ) {
             r = ret - 1;
             short_cut_right[spr] = ret;
@@ -256,15 +254,15 @@ function find_quartile(tlsh, quartiles)
             break;
         }
     }
-    
+
     short_cut_left[spl] = p2-1;
     short_cut_right[spr] = p2+1;
 
-    for( var i=0, l=0; i<=spl; i++ ) {
-        var r = short_cut_left[i];
+    for(i=0, l=0; i<=spl; i++ ) {
+        r = short_cut_left[i];
         if( r > p1 ) {
             for( ; ; ) {
-                var ret = partition( buf, l, r );
+                ret = partition( buf, l, r );
                 if( ret > p1 ) {
                     r = ret-1;
                 } else if( ret < p1 ) {
@@ -283,11 +281,11 @@ function find_quartile(tlsh, quartiles)
         }
     }
 
-    for( var i=0, r=end; i<=spr; i++ ) {
-        var l = short_cut_right[i];
+    for(i=0, r=end; i<=spr; i++ ) {
+        l = short_cut_right[i];
         if( l < p3 ) {
             for( ; ; ) {
-                var ret = partition( buf, l, r );
+                ret = partition( buf, l, r );
                 if( ret > p3 ) {
                     r = ret-1;
                 } else if( ret < p3 ) {
@@ -309,7 +307,7 @@ function find_quartile(tlsh, quartiles)
 
 ///////////////////////////////////////////////////////////////////////////////////
 // Definition of tlsh object
-var Tlsh = function () 
+var Tlsh = function ()
 {
     this.checksum = new Uint8Array(TLSH_CHECKSUM_LEN);   // unsigned char array
     this.slide_window = new Uint8Array(SLIDING_WND_SIZE);
@@ -318,27 +316,27 @@ var Tlsh = function ()
     this.tmp_code = new Uint8Array(CODE_SIZE);
     this.Lvalue = 0;
     this.Q = 0;
-    this.lsh_code = new String;   
-    this.lsh_code_valid = false;   
+    this.lsh_code = "";
+    this.lsh_code_valid = false;
 };
 
-// Use get/setQLo() and get/setQHi() from TLSH.java implementation 
-function getQLo(Q) 
+// Use get/setQLo() and get/setQHi() from TLSH.java implementation
+function getQLo(Q)
 {
-    return (Q & 0x0F)
+    return (Q & 0x0F);
 }
 
-function getQHi(Q) 
+function getQHi(Q)
 {
     return ((Q & 0xF0) >> 4);
 }
 
-function setQLo(Q, x) 
+function setQLo(Q, x)
 {
     return (Q & 0xF0) | (x & 0x0F);
 }
 
-function setQHi(Q, x) 
+function setQHi(Q, x)
 {
     return (Q & 0x0F) | ((x & 0x0F) << 4);
 }
@@ -347,7 +345,7 @@ function setQHi(Q, x)
 // are in strings str_1 and str_2 (see simple_test.cpp)
 //
 // length parameter defaults to str.length
-Tlsh.prototype.update = function (str, length) 
+Tlsh.prototype.update = function (str, length)
 {
     length = typeof length !== 'undefined' ?  length : str.length;
 
@@ -355,7 +353,7 @@ Tlsh.prototype.update = function (str, length)
     for(var i = 0; i < length; i++) {
         var code = str.charCodeAt(i);
         if (code > 255) {
-            alert("Unexpected " + str[i] + " has value " + code + " which is too large");
+            console.log("Unexpected " + str[i] + " has value " + code + " which is too large");
             return;
         }
         // Since charCodeAt returns between 0~65536, simply save every character as 2-bytes
@@ -363,30 +361,28 @@ Tlsh.prototype.update = function (str, length)
         data.push(code & 0xff);
     }
 
-    if (length != data.length) 
+    if (length != data.length)
     {
-        alert("Unexpected string length:" + length + " is not equal to value unsigned char length: " + data.length);
+        console.log("Unexpected string length:" + length + " is not equal to value unsigned char length: " + data.length);
         return;
     }
 
     var j = this.data_len % RNG_SIZE;
     var fed_len = this.data_len;
 
-    for( var i=0; i<length; i++, fed_len++, j=RNG_IDX(j+1) ) {
+    for(i=0; i<length; i++, fed_len++, j=RNG_IDX(j+1) ) {
         this.slide_window[j] = data[i];
-        debug && console.log("slide_window["+j+"]="+this.slide_window[j]);
-        
+
         if ( fed_len >= 4 ) {
             //only calculate when input >= 5 bytes
             var j_1 = RNG_IDX(j-1);
             var j_2 = RNG_IDX(j-2);
             var j_3 = RNG_IDX(j-3);
             var j_4 = RNG_IDX(j-4);
-           
+
             for (var k = 0; k < TLSH_CHECKSUM_LEN; k++) {
-                 if (k == 0) {
+                 if (k === 0) {
                      this.checksum[k] = b_mapping(0, this.slide_window[j], this.slide_window[j_1], this.checksum[k]);
-                     debug && console.log("tlsh.checksum["+k+"]="+this.checksum[k]);
                  }
                  else {
                      // use calculated 1 byte checksums to expand the total checksum to 3 bytes
@@ -414,21 +410,22 @@ Tlsh.prototype.update = function (str, length)
         }
     }
     this.data_len += length;
-}
+};
 
 // final is a reserved word
-Tlsh.prototype.finale = function (str, length) 
+Tlsh.prototype.finale = function (str, length)
 {
+    var j = 0;
     if (typeof str !== 'undefined') {
 		this.update(str, length);
 	}
 
     // incoming data must more than or equal to 512 bytes
     if (this.data_len < 256) {
-      alert("ERROR: length too small - " + this.data_len); //  + ")");
+      console.log("ERROR: length too small - " + this.data_len); //  + ")");
     }
-    
-    var quartiles = new Object();
+
+    var quartiles = {};
     quartiles.q1 = 0;
     quartiles.q2 = 0;
     quartiles.q3 = 0;
@@ -437,19 +434,19 @@ Tlsh.prototype.finale = function (str, length)
     // buckets must be more than 50% non-zero
     var nonzero = 0;
     for(var i=0; i<CODE_SIZE; i++) {
-      for(var j=0; j<4; j++) {
+      for(j=0; j<4; j++) {
         if (this.a_bucket[4*i + j] > 0) {
           nonzero++;
         }
       }
     }
     if (nonzero <= 4*CODE_SIZE/2) {
-      alert("ERROR: not enought variation in input - " + nonzero + " < " + 4*CODE_SIZE/2);
+      console.log("ERROR: not enought variation in input - " + nonzero + " < " + 4*CODE_SIZE/2);
     }
-    
-    for(var i=0; i<CODE_SIZE; i++) {
+
+    for(i=0; i<CODE_SIZE; i++) {
         var h=0;
-        for(var j=0; j<4; j++) {
+        for(j=0; j<4; j++) {
             var k = this.a_bucket[4*i + j];
             if( quartiles.q3 < k ) {
                 h += 3 << (j*2);  // leave the optimization j*2 = j<<1 or j*2 = j+j for compiler
@@ -465,31 +462,28 @@ Tlsh.prototype.finale = function (str, length)
     this.Lvalue = l_capturing(this.data_len);
     this.Q = setQLo(this.Q, ((quartiles.q1*100)/quartiles.q3) % 16);
     this.Q = setQHi(this.Q, ((quartiles.q2*100)/quartiles.q3) % 16);
-    this.lsh_code_valid = true;   
-}
+    this.lsh_code_valid = true;
+};
 
-Tlsh.prototype.hash = function () 
+Tlsh.prototype.hash = function ()
 {
-    if (this.lsh_code_valid == false) {
+    if (this.lsh_code_valid === false) {
         return "ERROR IN PROCESSING";
     }
 
-    var tmp = new Object();
-    tmp.checksum = new Uint8Array(TLSH_CHECKSUM_LEN);   
+    var tmp = {};
+    tmp.checksum = new Uint8Array(TLSH_CHECKSUM_LEN);
     tmp.Lvalue = 0;
     tmp.Q = 0;
     tmp.tmp_code = new Uint8Array(CODE_SIZE);
 
-    for (var k = 0; k < TLSH_CHECKSUM_LEN; k++) {    
+    for (var k = 0; k < TLSH_CHECKSUM_LEN; k++) {
         tmp.checksum[k] = swap_byte( this.checksum[k] );
-        debug && console.log("After swap_byte for checksum: tmp.checksum:"+tmp.checksum[k]+", tlsh.checksum:"+this.checksum[k]);
     }
     tmp.Lvalue = swap_byte( this.Lvalue );
     tmp.Q = swap_byte( this.Q );
-    debug && console.log("After swap_byte for Q: tmp.Q:"+tmp.Q+", tlsh.Q:"+this.Q);
     for( var i=0; i < CODE_SIZE; i++ ){
         tmp.tmp_code[i] = this.tmp_code[CODE_SIZE-1-i];
-        debug && console.log("tmp.tmp_code["+i+"]:"+tmp.tmp_code[i]);
     }
 
     this.lsh_code = to_hex(tmp.checksum, TLSH_CHECKSUM_LEN);
@@ -502,9 +496,9 @@ Tlsh.prototype.hash = function ()
     this.lsh_code = this.lsh_code.concat(to_hex(tmpArray, 1));
     this.lsh_code = this.lsh_code.concat(to_hex(tmp.tmp_code, CODE_SIZE));
     return this.lsh_code;
-}
+};
 
-Tlsh.prototype.reset = function () 
+Tlsh.prototype.reset = function ()
 {
     this.checksum = new Uint8Array(TLSH_CHECKSUM_LEN);
     this.slide_window = new Uint8Array(SLIDING_WND_SIZE);
@@ -513,82 +507,84 @@ Tlsh.prototype.reset = function ()
     this.tmp_code = new Uint8Array(CODE_SIZE);
     this.Lvalue = 0;
     this.Q = 0;
-    this.lsh_code = new String;   
-    this.lsh_code_valid = false;   
-}
+    this.lsh_code = "";
+    this.lsh_code_valid = false;
+};
 
 // len_diff defaults to true
-Tlsh.prototype.totalDiff = function(other, len_diff) 
+Tlsh.prototype.totalDiff = function(other, len_diff)
 {
-    if (this == other) 
+    if (this == other)
     {
         return 0;
     }
 
     len_diff = typeof len_diff !== 'undefined' ?  len_diff : true;
     var diff = 0;
-    
+
     if (len_diff) {
         var ldiff = mod_diff( this.Lvalue, other.Lvalue, RANGE_LVALUE);
-        if ( ldiff == 0 )
+        if ( ldiff === 0 )
             diff = 0;
         else if ( ldiff == 1 )
             diff = 1;
         else
            diff += ldiff*12;
     }
-    
+
     var q1diff = mod_diff( getQLo(this.Q), getQLo(other.Q), RANGE_QRATIO);
     if ( q1diff <= 1 )
         diff += q1diff;
-    else           
+    else
         diff += (q1diff-1)*12;
-    
+
     var q2diff = mod_diff( getQHi(this.Q), getQHi(other.Q), RANGE_QRATIO);
     if ( q2diff <= 1)
         diff += q2diff;
     else
         diff += (q2diff-1)*12;
-    
-    for (var k = 0; k < TLSH_CHECKSUM_LEN; k++) {    
+
+    for (var k = 0; k < TLSH_CHECKSUM_LEN; k++) {
       if (this.checksum[k] != other.checksum[k] ) {
         diff ++;
         break;
       }
     }
-    
+
     diff += h_distance( CODE_SIZE, this.tmp_code, other.tmp_code );
 
     return diff;
-}
+};
 
-Tlsh.prototype.fromTlshStr = function(str) 
+Tlsh.prototype.fromTlshStr = function(str)
 {
     if (str.length != TLSH_STRING_LEN) {
-        alert("Tlsh.fromTlshStr() - string has wrong length (" + str.length + " != " + TLSH_STRING_LEN + ")");
+        console.log("Tlsh.fromTlshStr() - string has wrong length (" + str.length + " != " + TLSH_STRING_LEN + ")");
         return;
     }
     for( var i=0; i < TLSH_STRING_LEN; i++ ) {
-        if (!( 
-            (str[i] >= '0' && str[i] <= '9') || 
+        if (!(
+            (str[i] >= '0' && str[i] <= '9') ||
             (str[i] >= 'A' && str[i] <= 'F') ||
             (str[i] >= 'a' && str[i] <= 'f') ))
         {
-            alert("Tlsh.fromTlshStr() - string has invalid (non-hex) characters");
+            console.log("Tlsh.fromTlshStr() - string has invalid (non-hex) characters");
             return;
         }
 	}
-	
+
 	var tmp = from_hex(str);
 	// Order of assignment is based on order of fields in lsh_bin
 	// Also note that TLSH_CHECKSUM_LEN is 1
-	var i = 0;
+	i = 0;
     this.checksum[i] = swap_byte( tmp[i++] );
     this.Lvalue      = swap_byte( tmp[i++] );
     this.Q           = swap_byte( tmp[i++] );
-	
+
     for( var j=0; j < CODE_SIZE; j++ ) {
         this.tmp_code[j] = (tmp[i+CODE_SIZE-1-j]);
     }
-    this.lsh_code_valid = true;   
-}
+    this.lsh_code_valid = true;
+};
+
+module.exports = Tlsh;
