@@ -56,12 +56,11 @@ var dice1 = random(0,1);
 
 /*this function is an if/else statement that allows a regular mask to be generated
 50% of the time, a blurred mask 20% of the time, and an inverted mask
-the remaining 30% of the time. it takes the argument "dice" but i'm pretty sure
-that's wrong somehow*/
+the remaining 30% of the time.*/
 
-function diceroll(dice) {
+function diceroll(dice, inputimage) {
 	if (dice < .5 ){
-Jimp.read("input.png", function (err, input) {
+Jimp.read(inputimage, function (err, input) {
 	input.greyscale()
 		.brightness(random(-.5,1))
 		.contrast(random(.5,1))
@@ -73,7 +72,7 @@ Jimp.read("input.png", function (err, input) {
 	
 } else if (dice > .5 && dice < .7) {
 	
-Jimp.read("input.png", function (err, input) {
+Jimp.read(inputimage, function (err, input) {
 	input.greyscale()
 		.contrast(random(0,1))
 		.posterize(randomInt(2,20))
@@ -83,7 +82,7 @@ Jimp.read("input.png", function (err, input) {
 })
 	
 } else {
-	Jimp.read("input.png", function (err, input) {
+	Jimp.read(inputimage, function (err, input) {
 	input.greyscale()
 		.contrast(random(0,1))
 		.posterize(randomInt(2,20))
@@ -93,33 +92,40 @@ Jimp.read("input.png", function (err, input) {
 		}
 };
 
+function createmask(maskguide, maskimage) {
+
+Jimp.read(maskguide, function (err, poutput) {
+Jimp.read(maskimage, function (err, newimage) {
+    if (err) throw err;
+	newimage.mask(poutput, 0, 0 )
+         .write("mask.png"); // save 
+	});
+})
+}
+
+function applymask(inputimage, maskfinal) {
+	Jimp.read(inputimage, function (err, input) {
+	Jimp.read(maskfinal, function (err, mask) {
+    if (err) throw err;
+	input.composite(mask, 0, 0)
+         .write("finaloutput.png"); // save 
+	});
+})
+}
 
 //beginning of async series
 
 async.series([
 
 //call diceroll function
-function diceroll(dice1){},
+diceroll(dice1, "input.png"),
 
 //create mask
-	
-Jimp.read("poutput.png", function (err, poutput) {
-Jimp.read("newimage.png", function (err, newimage) {
-    if (err) throw err;
-	newimage.mask(poutput, 0, 0 )
-         .write("mask.png"); // save 
-	});
-}),
+createmask("poutput.png", "newimage.png"),
 
 //apply mask to image
 	
-Jimp.read("input.png", function (err, input) {
-Jimp.read("mask.png", function (err, mask) {
-    if (err) throw err;
-	input.composite(mask, 0, 0)
-         .write("finaloutput.png"); // save 
-	});
-}),
+applymask("input.png", "mask.png")
 
 	
 ]);
