@@ -22,13 +22,13 @@ var client = redis.createClient('32768', '52.91.195.111');
 
 var tlsh = require('./tlsh');
 
-client.on('connect', function() {
-      console.log('connected');
-});
-
-client.on("error", function (err) {
-      console.log("Error " + err);
-});
+//client.on('connect', function() {
+//      console.log('connected');
+//});
+//
+//client.on("error", function (err) {
+//      console.log("Error " + err);
+//});
 
 function modify(image_id) {
   async.waterfall([
@@ -103,8 +103,10 @@ function modify(image_id) {
 
 function select() {
   var comparisons = [];
+  var images = [];
   client.lrange('images', 0, 55, function(err, imgs) {
     var history = new Tlsh();
+    var images = imgs;
     client.hgetall('user:images', function(err, obj) {
       history.update(obj.tostring, obj.length - 1);
       history.finale();
@@ -116,8 +118,35 @@ function select() {
       }
     });
   });
-
-
+  var lowest = [[0, 0], [0, 0], [0, 0], [0, 0], [0, 0]];
+  for(var i = 0; i > comparisons.length; i++) {
+    if(5 < comparisons[i] < lowest[0][1]) {
+      lowest[0][0] = i;
+      lowest[0][1] = comparisons[i];
+      break;
+    } else if(5 < comparisons[i] < lowest[1][1]) {
+      lowest[1][0] = i;
+      lowest[1][1] = comparisons[i];
+      break;
+    } else if(5 < comparisons[i] < lowest[2][1]) {
+      lowest[2][0] = i;
+      lowest[2][1] = comparisons[i];
+      break;
+    } else if(5 < comparisons[i] < lowest[3][1]) {
+      lowest[3][0] = i;
+      lowest[3][1] = comparisons[i];
+      break;
+    } else if(5 < comparisons[i] < lowest[4][1]) {
+      lowest[4][0] = i;
+      lowest[4][1] = comparisons[i];
+      break;
+    }
+  };
+  return [JSON.parse(images[lowest[0][0]]),
+          JSON.parse(images[lowest[1][0]]),
+          JSON.parse(images[lowest[2][0]]),
+          JSON.parse(images[lowest[3][0]]),
+          JSON.parse(images[lowest[4][0]])];
 }
 
 function order() {
@@ -186,8 +215,8 @@ function saveimg(url, ext) {
         ezimg.resize({
                 src: tempfile,
                 dst: "images/"+shortid.generate()+".png",
-                width: 500,
-                height: 500,
+                width: 400,
+                height: 400,
                 ignoreAspectRatio: true
         }).then(function(image){
                 fs.unlinkSync(tempfile);
@@ -243,8 +272,8 @@ function dlchan() {
                             rpost = randind(posts);
                         }
                         saveimg("http://i.4cdn.org/s4s/"+rpost.tim+rpost.ext, rpost.ext);
-                        console.log("attempting to save "+rpost.tim+rpost.ext);
                 });
         });
 }
 
+oublio();
